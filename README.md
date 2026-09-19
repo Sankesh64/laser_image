@@ -38,6 +38,19 @@ python -m pip install -r requirements.txt
 python laser_image.py input/ganesha.png output/laser_art.png
 ```
 
+By default, the command also opens a terminal animation of the generated image. Use
+`--no-animate` when running without a terminal preview:
+
+```powershell
+python laser_image.py input/ganesha.png output/laser_art.png --no-animate
+```
+
+To replay an existing image manually:
+
+```powershell
+python animate_output.py output/laser_art.png
+```
+
 With custom settings:
 
 ```powershell
@@ -52,5 +65,7 @@ python laser_image.py input/ganesha.png output/laser_art.png --colors 10 --glow 
 - `--glow`: Glow blur strength. Default: `10`.
 - `--thick`: Edge line thickness. Default: `1`.
 - `--bg`: `black` or `dim`. Default: `black`.
+- `--no-animate`: Skip opening the animated terminal preview.
 
-The output is a regular PNG image suitable for previewing the laser-art effect. This project does not directly control laser hardware.
+The output is a regular PNG image suitable for previewing the laser-art effect. This
+project does not directly control laser hardware.

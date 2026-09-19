@@ -1,6 +1,10 @@
 """Turn a photo into a glowing, multi-color laser-style line drawing."""
 
 import argparse
+import os
+import platform
+import subprocess
+import sys
 
 import cv2
 import numpy as np
@@ -104,6 +108,43 @@ def create_laser_art(
     return result
 
 
+def launch_animation_in_new_terminal(output_path):
+    """Open a fresh terminal window and play the ANSI animation."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    animator = os.path.join(here, "animate_output.py")
+    system = platform.system()
+
+    try:
+        if system == "Windows":
+            subprocess.Popen(
+                ["cmd", "/c", "start", "Laser Art", "cmd", "/k", sys.executable, animator, output_path],
+                shell=True,
+            )
+        elif system == "Darwin":
+            script = (
+                f'tell application "Terminal" to do script '
+                f'"{sys.executable} {animator} {output_path}"'
+            )
+            subprocess.Popen(["osascript", "-e", script])
+        else:
+            for term_cmd in (
+                ["x-terminal-emulator", "-e", sys.executable, animator, output_path],
+                ["gnome-terminal", "--", sys.executable, animator, output_path],
+                ["konsole", "-e", sys.executable, animator, output_path],
+                ["xterm", "-e", sys.executable, animator, output_path],
+            ):
+                try:
+                    subprocess.Popen(term_cmd)
+                    break
+                except FileNotFoundError:
+                    continue
+            else:
+                raise FileNotFoundError("no known terminal emulator found")
+    except Exception as exc:
+        print(f"Could not open a new terminal automatically ({exc}).")
+        print(f"Run manually: {sys.executable} {animator} {output_path}")
+
+
 def _parse_args():
     parser = argparse.ArgumentParser(
         description="Convert a photo into laser-style line art."
@@ -116,6 +157,11 @@ def _parse_args():
     parser.add_argument("--glow", type=float, default=10)
     parser.add_argument("--thick", type=int, default=1)
     parser.add_argument("--bg", choices=["black", "dim"], default="black")
+    parser.add_argument(
+        "--no-animate",
+        action="store_true",
+        help="Skip opening a new terminal with the animated preview.",
+    )
     return parser.parse_args()
 
 
@@ -132,3 +178,6 @@ if __name__ == "__main__":
         background=args.bg,
     )
     print(f"Saved: {args.output}")
+
+    if not args.no_animate:
+        launch_animation_in_new_terminal(os.path.abspath(args.output))
