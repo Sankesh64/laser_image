@@ -22,10 +22,21 @@ def load_rgb(path):
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 
+def enhance_for_terminal(rgb):
+    """Increase glow visibility without turning the black background gray."""
+    normalized = rgb.astype(np.float32) / 255.0
+    lifted = np.power(normalized, 0.75) * 255.0
+    enhanced = np.clip(lifted, 0, 255).astype(np.uint8)
+
+    hsv = cv2.cvtColor(enhanced, cv2.COLOR_RGB2HSV).astype(np.float32)
+    hsv[:, :, 1] = np.clip(hsv[:, :, 1] * 1.2, 0, 255)
+    return cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
+
+
 def fit_to_terminal(rgb, margin_rows=2):
     """Downscale the image to fit the current terminal."""
     cols, rows = shutil.get_terminal_size(fallback=(100, 40))
-    max_w = cols
+    max_w = max(cols - 1, 2)
     max_h = max(rows - margin_rows, 5) * 2
 
     height, width = rgb.shape[:2]
@@ -55,7 +66,10 @@ def rows_to_ansi(rgb, brightness=1.0):
 
 
 def play(path, reveal_seconds=1.2, pulse_cycles=3, pulse_seconds=0.6):
-    rgb = fit_to_terminal(load_rgb(path))
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+    rgb = fit_to_terminal(enhance_for_terminal(load_rgb(path)))
     full_lines = rows_to_ansi(rgb)
     blank_line = " " * rgb.shape[1]
     line_count = len(full_lines)
@@ -72,7 +86,7 @@ def play(path, reveal_seconds=1.2, pulse_cycles=3, pulse_seconds=0.6):
         for _ in range(pulse_cycles):
             for step in range(pulse_steps):
                 phase = step / pulse_steps
-                brightness = 0.75 + 0.35 * (0.5 + 0.5 * math.sin(phase * 2 * math.pi))
+                brightness = 0.95 + 0.2 * (0.5 + 0.5 * math.sin(phase * 2 * math.pi))
                 frame = rows_to_ansi(rgb, brightness=brightness)
                 print(CLEAR_HOME + "\n".join(frame), end="", flush=True)
                 time.sleep(pulse_seconds / pulse_steps)
